@@ -1,5 +1,6 @@
 import pyray as rl
 from raylib import ffi
+import textwrap
 
 import Instances
 import entities as en
@@ -163,8 +164,8 @@ class UpgradeTreeEditor:
 	# ==========================================================
 	def draw_header(self):
 		rl.draw_rectangle(0, 0, self.window_width, 70, rl.LIGHTGRAY)
-		rl.gui_label(rl.Rectangle(20, 25, 50, 20), "Project Title")
-		if rl.gui_text_box(rl.Rectangle(80, 20, 350, 30), self.title_text, 128, self.title_edit_mode):
+		rl.gui_label(rl.Rectangle(20, 25, 100, 20), "Project Title")
+		if rl.gui_text_box(rl.Rectangle(100, 20, 350, 30), self.title_text, 128, self.title_edit_mode):
 			self.title_edit_mode = not self.title_edit_mode
 
 	def draw_sidebar(self):
@@ -317,7 +318,12 @@ class UpgradeTreeEditor:
 		if is_dropdown_active: rl.gui_unlock()
 
 		if self.error_message:
-			rl.draw_text(self.error_message, int(form_x + 15), int(form_y + table_h - 45), 11, rl.RED)
+			# Wrap the text at roughly 42 characters to fit inside the form width
+			wrapped_lines = textwrap.wrap(self.error_message, width=42)
+
+			for i, line in enumerate(wrapped_lines):
+				line_y_position = int(form_y + table_h - 60 + (i * 14))
+				rl.draw_text(line, int(form_x + 15), line_y_position, 11, rl.RED)
 
 	# ==========================================================
 	# SCHEMA INPUT FIELD WRAPPERS

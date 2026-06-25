@@ -196,11 +196,11 @@ class Instances:
                     dependents.append(i)
 
             for i in db[Node].values():
-                if i.nodeTree.Id == instance.ID:
+                if i.nodeTree.ID == instance.ID:
                     dependents.append(i)
 
         elif entityClass == Node:
-            for i in db[NodeTree].values():
+            for i in db[NodeRelation].values():
                 if i.parentNode.ID == instance.ID or i.childNode.ID == instance.ID:
                     dependents.append(i)
 

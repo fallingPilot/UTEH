@@ -6,21 +6,21 @@ from entities import (
 )
 
 class Instances:
-    """Objeto que almacena las instancias de todas las entidades"""
+    """Object that stores the instances of all entities"""
     def __init__(self, folderPath:str=""):
         self.folderPath = folderPath
         self.csvManager = CSVManager()
 
-        #Llave: La entidad en sí misma
-        #Valor: diccionario de {"ID":Instancia }
+        # Key: The entity itself
+        # Value: dictionary of {"ID": Instance}
 
-        self.dataBase: Dict[Type[BaseEntity], Dict[str,BaseEntity]] = self.initiateDB()
+        self.dataBase: Dict[Type[BaseEntity], Dict[str,BaseEntity]] = self.initiate_db()
 
-    def setTitle(self, title:str)->None:
+    def set_title(self, title:str)->None:
         self.folderPath = title
-        self.csvManager.setFolderPath(self.folderPath)
+        self.csvManager.set_folder_path(self.folderPath)
 
-    def initiateDB(self):
+    def initiate_db(self):
         return {
             StatType: {},
             UpgradeModifier: {},
@@ -34,28 +34,28 @@ class Instances:
             TreeUpgradeModifier: {}
         }
 
-    def saveAll(self):
-        """Guarda todos los valores en sus respectivos .csv"""
+    def save_all(self):
+        """Saves all values to their respective .csv files"""
         for entity, instancesDict in self.dataBase.items():
-            self.csvManager.writeInstances(entity, list(instancesDict.values()))
+            self.csvManager.write_instances(entity, list(instancesDict.values()))
 
         print("------------Saved all instances!--------")
 
-    def loadAll(self):
-        """Carga las instancias desde los csv en el orden de dependencia necesario"""
+    def load_all(self):
+        """Loads instances from the csv files in the required dependency order"""
         print("------------Loading all instances!--------")
 
-        self.dataBase = self.initiateDB()
+        self.dataBase = self.initiate_db()
 
         BaseEntity._registry.clear()
         db = self.dataBase
 
-        # ORDEN ESPECIFICO DE SOLO LECTURA
+        # SPECIFIC READ-ONLY ORDER
         LOAD_ORDER = [
-            StatType, UpgradeModifier, Ability, NodeTree,  # Primero entidades independientes
+            StatType, UpgradeModifier, Ability, NodeTree, # First independent entities
             StatBoost, Reward,
             Node,
-            NodeRelation, TreeAllowedStat, TreeUpgradeModifier  # Intermediarias al final
+            NodeRelation, TreeAllowedStat, TreeUpgradeModifier  # Intermediaries at the end
         ]
 
         for entity in LOAD_ORDER:
@@ -68,19 +68,19 @@ class Instances:
 
             match entity.__name__:
                 case "StatBoost":
-                    for row in self.csvManager.readInstances(entity):
+                    for row in self.csvManager.read_instances(entity):
                         stat_Instance = db[StatType].get(row[1])
                         upgMod_Instance = db[UpgradeModifier].get(row[2])
                         db[entity][row[0]] = StatBoost(ID=row[0], statType=stat_Instance, upgMod=upgMod_Instance)
 
                 case "Reward":
-                    for row in self.csvManager.readInstances(entity):
+                    for row in self.csvManager.read_instances(entity):
                         ab_obj = db[Ability].get(row[1])
                         sb_obj = db[StatBoost].get(row[2])
                         db[entity][row[0]] = Reward(ID=row[0], ability=ab_obj, statBoost=sb_obj)
 
                 case "Node":
-                    for row in self.csvManager.readInstances(entity):
+                    for row in self.csvManager.read_instances(entity):
                         tree_obj = db[NodeTree].get(row[3])
                         reward_obj = db[Reward].get(row[4])
                         db[entity][row[0]] = Node(
@@ -92,28 +92,29 @@ class Instances:
                         )
 
                 case "NodeRelation":
-                    for row in self.csvManager.readInstances(entity):
+                    for row in self.csvManager.read_instances(entity):
+                        print(row[0])
                         parent_obj = db[Node].get(row[1])
                         child_obj = db[Node].get(row[2])
                         db[entity][row[0]] = NodeRelation(ID=row[0], parentNode=parent_obj, childNode=child_obj)
 
                 case "TreeAllowedStat":
-                    for row in self.csvManager.readInstances(entity):
+                    for row in self.csvManager.read_instances(entity):
                         tree_obj = db[NodeTree].get(row[1])
                         stat_obj = db[StatType].get(row[2])
                         db[entity][row[0]] = TreeAllowedStat(ID=row[0], tree=tree_obj, stat=stat_obj,
                                                              baseValue=float(row[3]))
 
                 case "TreeUpgradeModifier":
-                    for row in self.csvManager.readInstances(entity):
+                    for row in self.csvManager.read_instances(entity):
                         tree_obj = db[NodeTree].get(row[1])
                         upgMod_obj = db[UpgradeModifier].get(row[2])
                         db[entity][row[0]] = TreeUpgradeModifier(ID=row[0], tree=tree_obj, upgMod=upgMod_obj,
                                                                  value=float(row[3]))
 
                 case _:
-                    # ENTIDADES COMPLETAMENTE INDEPENDIENTES: StatType, UpgradeModifier, Ability, NodeTree
-                    for row in self.csvManager.readInstances(entity):
+                    # COMPLETELY INDEPENDENT ENTITIES: StatType, UpgradeModifier, Ability, NodeTree
+                    for row in self.csvManager.read_instances(entity):
                         db[entity][row[0]] = entity(name=row[1], ID=row[0])
 
         print("------------All instances loaded!--------")
@@ -131,7 +132,7 @@ class Instances:
         print("Added instance: ", instance)
         return instance
 
-    def updateInstance(self, instance: BaseEntity):
+    def update_instance(self, instance: BaseEntity):
         entityClass = instance.__class__
 
         if entityClass not in self.dataBase:
@@ -144,7 +145,7 @@ class Instances:
         print("Updated instance: ", instance)
         return instance
 
-    def removeInstance(self, instance: BaseEntity, inCascade:bool=False):
+    def remove_instance(self, instance: BaseEntity, inCascade:bool=False):
         entityClass = instance.__class__
 
         if entityClass not in self.dataBase:
@@ -153,7 +154,7 @@ class Instances:
         if instance.ID not in self.dataBase[entityClass]:
             return
 
-        #ENCONTRAR TODAS LAS DEPENDENCIAS
+        #FIND ALL DEPENDENCIES
         db = self.dataBase
         dependents = []
 
@@ -215,7 +216,7 @@ class Instances:
 
         else:
             for dep in dependents:
-                self.removeInstance(dep, inCascade=True)
+                self.remove_instance(dep, inCascade=True)
 
         self.dataBase[entityClass].pop(instance.ID)
         print("Removed instance: ", instance)

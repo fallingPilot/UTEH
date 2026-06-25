@@ -36,7 +36,7 @@ class UpgradeTreeEditor:
 
 		current_title_str = ffi.string(self.title_text).decode("utf-8")
 		self.db = Instances.Instances(current_title_str)
-		self.db.setTitle(current_title_str)
+		self.db.set_title(current_title_str)
 
 		# default instances
 		stat_hp = en.StatType("Health")
@@ -269,7 +269,7 @@ class UpgradeTreeEditor:
 		rl.gui_label(rl.Rectangle(x + 20, y + 35, 400, 20), subtitle)
 
 		headers = entity_class.HEADERS
-		data = [ent.toDisplayList() for ent in self.db.dataBase[entity_class].values()]
+		data = [ent.to_display_list() for ent in self.db.dataBase[entity_class].values()]
 
 		table_w = w - 340
 		table_h = h - 85
@@ -491,7 +491,7 @@ class UpgradeTreeEditor:
 					if entity_class == en.TreeUpgradeModifier:
 						entity_class.storedUnique.discard((target_instance.nodeTree.ID, target_instance.upgMod.ID))
 
-					self.db.removeInstance(target_instance)
+					self.db.remove_instance(target_instance)
 					self.reset_form()
 				return
 
@@ -506,8 +506,8 @@ class UpgradeTreeEditor:
 					if mod_inst:
 						entity_class.storedUnique.discard(mod_inst.name)
 						entity_class.storedUnique.discard(mod_inst.name.upper())
-						mod_inst.name = mod_inst.checkUnique(input_text)
-						self.db.updateInstance(mod_inst)
+						mod_inst.name = mod_inst.check_unique(input_text)
+						self.db.update_instance(mod_inst)
 
 			# 3. Nodes
 			elif entity_class == en.Node:
@@ -534,7 +534,7 @@ class UpgradeTreeEditor:
 						mod_node.startNode = self.checkbox_val[0]
 						mod_node.nodeTree = picked_tree
 						mod_node.reward = picked_reward
-						self.db.updateInstance(mod_node)
+						self.db.update_instance(mod_node)
 
 			# 4. Rewards
 			elif entity_class == en.Reward:
@@ -559,7 +559,7 @@ class UpgradeTreeEditor:
 						en.Reward.storedUnique.add(unique_pair)
 						mod_rwd.ability = picked_ability
 						mod_rwd.statBoost = picked_boost
-						self.db.updateInstance(mod_rwd)
+						self.db.update_instance(mod_rwd)
 
 			# 5. Stat Boosts
 			elif entity_class == en.StatBoost:
@@ -584,7 +584,7 @@ class UpgradeTreeEditor:
 						en.StatBoost.storedUnique.add(unique_pair)
 						mod_bst.statType = picked_type
 						mod_bst.upgMod = picked_mod
-						self.db.updateInstance(mod_bst)
+						self.db.update_instance(mod_bst)
 
 			# 6. Node Relations
 			elif entity_class == en.NodeRelation:
@@ -608,7 +608,7 @@ class UpgradeTreeEditor:
 						en.NodeRelation.storedUnique.add(unique_pair)
 						mod_rel.parentNode = parent
 						mod_rel.childNode = child
-						self.db.updateInstance(mod_rel)
+						self.db.update_instance(mod_rel)
 
 			# 7. Tree Allowed Stats
 			elif entity_class == en.TreeAllowedStat:
@@ -639,7 +639,7 @@ class UpgradeTreeEditor:
 						mod_tas.nodeTree = picked_tree
 						mod_tas.statType = picked_stat
 						mod_tas.baseValue = base_val
-						self.db.updateInstance(mod_tas)
+						self.db.update_instance(mod_tas)
 
 			# 8. Tree Upgrade Modifiers
 			elif entity_class == en.TreeUpgradeModifier:
@@ -670,7 +670,7 @@ class UpgradeTreeEditor:
 						mod_tum.nodeTree = picked_tree
 						mod_tum.upgMod = picked_mod
 						mod_tum.value = val
-						self.db.updateInstance(mod_tum)
+						self.db.update_instance(mod_tum)
 
 			self.reset_form()
 
@@ -747,8 +747,8 @@ class UpgradeTreeEditor:
 		if rl.gui_button([popup_x + 10, popup_y + 30, 100, 30], "Yes"):
 			self.current_view = self.prev_view
 			current_title = ffi.string(self.title_text).decode("utf-8")
-			self.db.setTitle(current_title)
-			self.db.saveAll()
+			self.db.set_title(current_title)
+			self.db.save_all()
 			return
 		if rl.gui_button([popup_x + 190, popup_y + 30, 100, 30], "No"):
 			self.current_view = self.prev_view
@@ -767,8 +767,8 @@ class UpgradeTreeEditor:
 			self.current_view = self.prev_view
 			current_title = ffi.string(self.title_text).decode("utf-8")
 			self.db = Instances.Instances(current_title)
-			self.db.setTitle(current_title)
-			self.db.loadAll()
+			self.db.set_title(current_title)
+			self.db.load_all()
 			self.reset_form()
 			return
 		if rl.gui_button([popup_x + 210, popup_y + 30, 100, 30], "No"):

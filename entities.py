@@ -9,9 +9,9 @@ class BaseEntity:
 		if self.__class__.__name__ not in BaseEntity._registry:
 			BaseEntity._registry[self.__class__.__name__] = set()
 
-		self.ID = self.checkID(ID) or self.newID()
+		self.ID = self.check_id(ID) or self.new_id()
 
-	def checkID(self, ID: str) -> str:
+	def check_id(self, ID: str) -> str:
 		if (self.idPrefix not in ID) or (not ID):
 			return ""
 
@@ -23,7 +23,7 @@ class BaseEntity:
 			return ID
 		return ""
 
-	def newID(self):
+	def new_id(self):
 		counter = 1
 		classIds = BaseEntity._registry[self.__class__.__name__]
 
@@ -35,7 +35,7 @@ class BaseEntity:
 				return candidate
 			counter += 1
 
-	def checkUnique(self, value):
+	def check_unique(self, value):
 		if isinstance(value, str):
 			value = value.strip().upper()
 
@@ -53,14 +53,14 @@ class BaseEntity:
 		return getattr(self, 'name', self.ID)
 
 	def __str__(self):
-		return ','.join(map(str, self.toList()))
+		return ','.join(map(str, self.to_list()))
 
-	def toList(self):
+	def to_list(self):
 		return [self.ID]
 
-	def toDisplayList(self):
-		"""Used strictly for UI Table rendering. Defaults to toList()."""
-		return self.toList()
+	def to_display_list(self):
+		"""Used strictly for UI Table rendering. Defaults to to_list()."""
+		return self.to_list()
 
 
 #
@@ -72,23 +72,23 @@ class StatType(BaseEntity):
 
 	def __init__(self, name: str, ID: str = ""):
 		super().__init__("STAT", ID)
-		self.name = super().checkUnique(name)
+		self.name = super().check_unique(name)
 
-	def toList(self):
-		return super().toList() + [self.name]
+	def to_list(self):
+		return super().to_list() + [self.name]
 
 
 class UpgradeModifier(BaseEntity):
-	"""Entidad que mantiene los tags de las modificaciones posibles de las estadísticas"""
+	"""Entity that holds the tags for possible stat modifications"""
 	HEADERS = BaseEntity.HEADERS + ["NAME"]
 	storedUnique = set()
 
 	def __init__(self, name: str, ID: str = ""):
 		super().__init__("UPGMOD", ID)
-		self.name = super().checkUnique(name)
+		self.name = super().check_unique(name)
 
-	def toList(self):
-		return super().toList() + [self.name]
+	def to_list(self):
+		return super().to_list() + [self.name]
 
 
 class Ability(BaseEntity):
@@ -97,13 +97,13 @@ class Ability(BaseEntity):
 
 	def __init__(self, name: str, ID: str = ""):
 		super().__init__("ABILITY", ID)
-		self.name = super().checkUnique(name)
+		self.name = super().check_unique(name)
 
-	def toList(self):
-		return super().toList() + [self.name]
+	def to_list(self):
+		return super().to_list() + [self.name]
 
-	def toDisplayList(self):
-		return super().toList() + [self.name]
+	def to_display_list(self):
+		return super().to_list() + [self.name]
 
 
 class StatBoost(BaseEntity):
@@ -123,11 +123,11 @@ class StatBoost(BaseEntity):
 		self.statType = statType
 		self.upgMod = upgMod
 
-	def toList(self):
-		return super().toList() + [self.statType.ID, self.upgMod.ID]
+	def to_list(self):
+		return super().to_list() + [self.statType.ID, self.upgMod.ID]
 
-	def toDisplayList(self):
-		return super().toList() + [self.statType.display_name, self.upgMod.display_name]
+	def to_display_list(self):
+		return super().to_list() + [self.statType.display_name, self.upgMod.display_name]
 
 
 class Reward(BaseEntity):
@@ -149,15 +149,15 @@ class Reward(BaseEntity):
 		self.ability = ability
 		self.statBoost = statBoost
 
-	def toList(self):
+	def to_list(self):
 		ab_id = self.ability.ID if self.ability else ""
 		sb_id = self.statBoost.ID if self.statBoost else ""
-		return super().toList() + [ab_id, sb_id]
+		return super().to_list() + [ab_id, sb_id]
 
-	def toDisplayList(self):
+	def to_display_list(self):
 		ab_disp = self.ability.display_name if self.ability else "None"
 		sb_disp = self.statBoost.display_name if self.statBoost else "None"
-		return super().toList() + [ab_disp, sb_disp]
+		return super().to_list() + [ab_disp, sb_disp]
 
 
 class NodeTree(BaseEntity):
@@ -166,10 +166,10 @@ class NodeTree(BaseEntity):
 
 	def __init__(self, name: str, ID: str = ""):
 		super().__init__("TREE", ID)
-		self.name = super().checkUnique(name)
+		self.name = super().check_unique(name)
 
-	def toList(self):
-		return super().toList() + [self.name]
+	def to_list(self):
+		return super().to_list() + [self.name]
 
 
 class Node(BaseEntity):
@@ -182,22 +182,13 @@ class Node(BaseEntity):
 		self.nodeTree = nodeTree
 		self.reward = reward
 
-	def toList(self):
-		return super().toList() + [self.nRequired, int(self.startNode), self.nodeTree.ID, self.reward.ID]
+	def to_list(self):
+		return super().to_list() + [self.nRequired, int(self.startNode), self.nodeTree.ID, self.reward.ID]
 
-	def toDisplayList(self):
-		return super().toList() + [self.nRequired, int(self.startNode), self.nodeTree.display_name, self.reward.display_name]
-
-
-#
-# Entidades intermedias de relacion
-#
+	def to_display_list(self):
+		return super().to_list() + [self.nRequired, int(self.startNode), self.nodeTree.display_name, self.reward.display_name]
 
 class NodeRelation(BaseEntity):
-	"""
-	Tabla intermedia para MxM tablas de nodos padre e hijo
-	Representa las conexiones de nodos en el grafo
-	"""
 	HEADERS = BaseEntity.HEADERS + ["PARENT", "CHILD"]
 
 	def __init__(self, parentNode: Node, childNode: Node, ID: str = ""):
@@ -205,14 +196,17 @@ class NodeRelation(BaseEntity):
 		self.parentNode = parentNode
 		self.childNode = childNode
 
-	def toDisplayList(self):
-		return super().toList() + [self.parentNode.display_name, self.childNode.display_name]
+	def to_list(self):
+		return super().to_list() + [self.parentNode.ID, self.childNode.ID]
+
+	def to_display_list(self):
+		return super().to_list() + [self.parentNode.display_name, self.childNode.display_name]
 
 
 class TreeAllowedStat(BaseEntity):
 	"""
-	Tabla intermedia para MxN arboles de mejora y tipos de stat
-	Un arbol permite muchas stats, un stat puede estar en muchos arboles
+	Intermediate class for trees and stats.
+	Since a tree can have many stats, and a stat can be in many trees.
 	"""
 	HEADERS = BaseEntity.HEADERS + ["TREE", "STAT", "BASEVALUE"]
 	storedUnique = set()
@@ -231,8 +225,8 @@ class TreeAllowedStat(BaseEntity):
 		self.statType = stat
 		self.baseValue = baseValue
 
-	def toList(self):
-		return super().toList() + [self.nodeTree.ID, self.statType.ID, self.baseValue]
+	def to_list(self):
+		return super().to_list() + [self.nodeTree.ID, self.statType.ID, self.baseValue]
 
 
 class TreeUpgradeModifier(BaseEntity):
@@ -253,8 +247,8 @@ class TreeUpgradeModifier(BaseEntity):
 		self.upgMod = upgMod
 		self.value = value
 
-	def toList(self):
-		return super().toList() + [self.nodeTree.ID, self.upgMod.ID, self.value]
+	def to_list(self):
+		return super().to_list() + [self.nodeTree.ID, self.upgMod.ID, self.value]
 
-	def toDisplayList(self):
-		return super().toList() + [self.nodeTree.display_name, self.upgMod.display_name, self.value]
+	def to_display_list(self):
+		return super().to_list() + [self.nodeTree.display_name, self.upgMod.display_name, self.value]

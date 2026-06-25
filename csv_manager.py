@@ -6,44 +6,44 @@ from entities import BaseEntity
 class CSVManager:
     def __init__(self):
         """
-        Inicia el manager con directorio de los archivos csv
+        Initializes the manager with the csv files directory
         """
-        self.folderPath = ""
+        self.folder_path = ""
 
-    def _getFilename(self, entityClass: Type[BaseEntity])->str:
-        """Genera el nombre del archivo segun el nombre de la clase"""
-        return os.path.join(self.folderPath, f"{entityClass.__name__}.csv")
+    def _get_filename(self, entity_class: Type[BaseEntity])->str:
+        """Generates the filename based on the class name"""
+        return os.path.join(self.folder_path, f"{entity_class.__name__}.csv")
 
-    def setFolderPath(self, ProjectTitle:str)->None:
-        self.folderPath = ProjectTitle
-        self.folderPath = os.path.join(self.folderPath,"Entities")
-        print(self.folderPath)
+    def set_folder_path(self, project_title:str)->None:
+        self.folder_path = project_title
+        self.folder_path = os.path.join(self.folder_path, "Entities")
+        print(self.folder_path)
 
-    def writeInstances(self, entityClass: Type[BaseEntity], instances: List[BaseEntity])->None:
+    def write_instances(self, entity_class: Type[BaseEntity], instances: List[BaseEntity])->None:
         """Escribe la lista de las instancias a su archivo csv"""
-        if self.folderPath and not os.path.exists(self.folderPath):
-            os.makedirs(self.folderPath)
+        if self.folder_path and not os.path.exists(self.folder_path):
+            os.makedirs(self.folder_path)
 
-        filename = self._getFilename(entityClass)
+        filename = self._get_filename(entity_class)
         print("Writing to:", os.path.abspath(filename))
 
         with open(filename, 'w', newline='') as f:
             writer = csv.writer(f)
 
-            if hasattr(entityClass, 'HEADERS'):
-                writer.writerow(entityClass.HEADERS)
+            if hasattr(entity_class, 'HEADERS'):
+                writer.writerow(entity_class.HEADERS)
 
             for instance in instances:
-                writer.writerow(instance.toList())
+                writer.writerow(instance.to_list())
 
-    def readInstances(self, entityClass: Type[BaseEntity])->List[List[str]]:
-        """Lee el archivo csv y devuelve una lista de filas"""
-        filename = self._getFilename(entityClass)
+    def read_instances(self, entity_class: Type[BaseEntity])->List[List[str]]:
+        """Reads the csv file and returns a list of rows"""
+        filename = self._get_filename(entity_class)
         print("Loading from:", os.path.abspath(filename))
         data = []
 
         if not os.path.isfile(filename):
-            print(f"El archivo {filename} no existe!")
+            print(f"The file {filename} doesn't exist!")
             return data
 
         with open(filename, 'r', newline='') as f:

@@ -16,4 +16,7 @@ venv
 *.onefile-build/
 
 # Executables
-.exe
+*.exe
+
+#UTEH project
+Default Title/

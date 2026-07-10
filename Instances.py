@@ -6,14 +6,19 @@ from entities import (
 )
 
 class Instances:
-    """Object that stores the instances of all entities"""
+    """Object that stores the instances of every entity
+
+    """
     def __init__(self, folderPath:str=""):
+
+        """
+        :param folderPath: The folder path when storing the instances into csv's.
+        """
         self.folderPath = folderPath
         self.csvManager = CSVManager()
 
         # Key: The entity itself
         # Value: dictionary of {"ID": Instance}
-
         self.dataBase: Dict[Type[BaseEntity], Dict[str,BaseEntity]] = self.initiate_db()
 
     def set_title(self, title:str)->None:
@@ -21,6 +26,7 @@ class Instances:
         self.csvManager.set_folder_path(self.folderPath)
 
     def initiate_db(self):
+        BaseEntity.clear_registry()
         return {
             StatType: {},
             UpgradeModifier: {},
@@ -46,8 +52,6 @@ class Instances:
         print("------------Loading all instances!--------")
 
         self.dataBase = self.initiate_db()
-
-        BaseEntity._registry.clear()
         db = self.dataBase
 
         # SPECIFIC READ-ONLY ORDER
@@ -120,6 +124,7 @@ class Instances:
         print("------------All instances loaded!--------")
 
     def addInstance(self, instance: BaseEntity):
+        """Adds the selected instance to the database."""
         entityClass = instance.__class__
 
         if entityClass not in self.dataBase:
@@ -133,6 +138,7 @@ class Instances:
         return instance
 
     def update_instance(self, instance: BaseEntity):
+        """Updates the referred instance."""
         entityClass = instance.__class__
 
         if entityClass not in self.dataBase:
@@ -145,7 +151,11 @@ class Instances:
         print("Updated instance: ", instance)
         return instance
 
-    def remove_instance(self, instance: BaseEntity, inCascade:bool=False):
+    def remove_instance(self, instance: BaseEntity, in_cascade:bool=False):
+        """Removes the selected instance from the database.
+        :param instance: Instance to remove.
+        :param in_cascade: If the dependents are removed as well.
+        """
         entityClass = instance.__class__
 
         if entityClass not in self.dataBase:
@@ -210,13 +220,15 @@ class Instances:
                     dependents.append(i)
 
         if dependents:
-            if not inCascade:
-                dependents_names = ",".join([f"{d.__class__.__name__}({d.ID})" for d in dependents])
-                raise ValueError(f"Can't delete {entityClass.__name__} with ID {instance.ID}. Used by: {dependents_names}")
+            if not in_cascade:
+                dependents_names = ",\n".join([f"{d.ID}" for d in dependents])
+                raise ValueError(f"Can't delete {entityClass.__name__} with ID {instance.ID}.\nUsed by: {dependents_names}")
 
         else:
             for dep in dependents:
-                self.remove_instance(dep, inCascade=True)
+                #Recursive call, remove every instance that depends on this one
+                self.remove_instance(dep, in_cascade=True)
 
         self.dataBase[entityClass].pop(instance.ID)
         print("Removed instance: ", instance)
+        instance.remove_self()

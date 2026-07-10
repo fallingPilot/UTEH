@@ -17,7 +17,7 @@ class CSVManager:
     def set_folder_path(self, project_title:str)->None:
         self.folder_path = project_title
         self.folder_path = os.path.join(self.folder_path, "Entities")
-        print(self.folder_path)
+        print("Project folder path is: ",self.folder_path)
 
     def write_instances(self, entity_class: Type[BaseEntity], instances: List[BaseEntity])->None:
         """Escribe la lista de las instancias a su archivo csv"""

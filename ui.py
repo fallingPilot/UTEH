@@ -5,7 +5,6 @@ import textwrap
 import Instances
 import entities as en
 
-
 class UpgradeTreeEditor:
 	# ==========================================================
 	# CONSTANTS & VIEWS
@@ -24,63 +23,74 @@ class UpgradeTreeEditor:
 	VIEW_POPUP_LOAD = 11
 
 	def __init__(self, width=1280, height=720, title="Upgrade Trees Easy Handler"):
+		#Window vars
 		self.window_width = width
 		self.window_height = height
 		self.window_title = title
 
+		#View vars
 		self.current_view = self.VIEW_UPGRADE_TREES
 		self.prev_view = self.VIEW_UPGRADE_TREES
 		self.title_edit_mode = False
 
+		#Sorting state variables
+		self.sort_col_idx = 0
+		self.sort_ascending = True
+
+		#Scroll var
 		self.table_scroll_y = 0.0
+
+		#Title var
 		self.title_text = ffi.new("char[128]", b"Default Title")
 
+		#Define variables to the database
 		current_title_str = ffi.string(self.title_text).decode("utf-8")
-		self.db = Instances.Instances(current_title_str)
-		self.db.set_title(current_title_str)
+		self.instances = Instances.Instances(current_title_str)
+		self.instances.set_title(current_title_str)
 
-		# default instances
+		# Default instances
+		# 1. Basic Entities
 		stat_hp = en.StatType("Health")
 		stat_dmg = en.StatType("Damage")
-		self.db.addInstance(stat_hp)
-		self.db.addInstance(stat_dmg)
+		self.instances.addInstance(stat_hp)
+		self.instances.addInstance(stat_dmg)
 
-		mod_flat = en.UpgradeModifier("Flat Increase")
-		mod_perc = en.UpgradeModifier("Percentage Increase")
-		self.db.addInstance(mod_flat)
-		self.db.addInstance(mod_perc)
+		mod_strd = en.UpgradeModifier("Standard Increase")
+		mod_low = en.UpgradeModifier("Low Increase")
+		self.instances.addInstance(mod_strd)
+		self.instances.addInstance(mod_low)
 
 		abil_fire = en.Ability("Fireball")
 		abil_dash = en.Ability("Dash")
-		self.db.addInstance(abil_fire)
-		self.db.addInstance(abil_dash)
+		self.instances.addInstance(abil_fire)
+		self.instances.addInstance(abil_dash)
 
 		tree_mage = en.NodeTree("Mage Class")
-		self.db.addInstance(tree_mage)
+		self.instances.addInstance(tree_mage)
 
 		# 2. Intermediate Entities (Require Base Entities)
-		boost_hp = en.StatBoost(statType=stat_hp, upgMod=mod_flat)
-		boost_dmg = en.StatBoost(statType=stat_dmg, upgMod=mod_perc)
-		self.db.addInstance(boost_hp)
-		self.db.addInstance(boost_dmg)
+		boost_hp = en.StatBoost(statType=stat_hp, upgMod=mod_strd)
+		boost_dmg = en.StatBoost(statType=stat_dmg, upgMod=mod_low)
+		self.instances.addInstance(boost_hp)
+		self.instances.addInstance(boost_dmg)
 
 		reward_1 = en.Reward(ability=abil_fire, statBoost=boost_hp)
 		reward_2 = en.Reward(ability=abil_dash, statBoost=boost_dmg)
-		self.db.addInstance(reward_1)
-		self.db.addInstance(reward_2)
+		self.instances.addInstance(reward_1)
+		self.instances.addInstance(reward_2)
 
 		# 3. Nodes (Require Trees and Rewards)
 		node_root = en.Node(nRequired=0, startingNode=True, nodeTree=tree_mage, reward=reward_1)
 		node_child = en.Node(nRequired=5, startingNode=False, nodeTree=tree_mage, reward=reward_2)
-		self.db.addInstance(node_root)
-		self.db.addInstance(node_child)
+		self.instances.addInstance(node_root)
+		self.instances.addInstance(node_child)
 
 		# 4. Relational Entities (Require Nodes, Trees, Stats, Mods)
-		self.db.addInstance(en.NodeRelation(parentNode=node_root, childNode=node_child))
-		self.db.addInstance(en.TreeAllowedStat(tree=tree_mage, stat=stat_hp, baseValue=100.0))
-		self.db.addInstance(en.TreeUpgradeModifier(tree=tree_mage, upgMod=mod_perc, value=0.15))
-
-
+		self.instances.addInstance(en.NodeRelation(parentNode=node_root, childNode=node_child))
+		self.instances.addInstance(en.TreeAllowedStat(tree=tree_mage, stat=stat_hp, baseValue=10.0))
+		self.instances.addInstance(en.TreeAllowedStat(tree=tree_mage, stat=stat_dmg, baseValue=15.0))
+		self.instances.addInstance(en.TreeUpgradeModifier(tree=tree_mage, upgMod=mod_low, value=0.5))
+		self.instances.addInstance(en.TreeUpgradeModifier(tree=tree_mage, upgMod=mod_strd, value=1.0))
 
 		self.reset_form()
 
@@ -104,7 +114,7 @@ class UpgradeTreeEditor:
 	def load_selected_into_form(self, entity_class, instance_id):
 		self.selected_id = instance_id
 		self.error_message = ""
-		instance = self.db.dataBase[entity_class].get(instance_id)
+		instance = self.instances.dataBase[entity_class].get(instance_id)
 		if not instance:
 			return
 
@@ -116,47 +126,47 @@ class UpgradeTreeEditor:
 		elif entity_class == en.Node:
 			self.text_buffer_1 = ffi.new("char[128]", str(instance.nRequired).encode('utf-8'))
 			self.checkbox_val[0] = instance.startNode
-			trees = list(self.db.dataBase[en.NodeTree].values())
+			trees = list(self.instances.dataBase[en.NodeTree].values())
 			self.dropdown_active_1 = next((i for i, t in enumerate(trees) if t.ID == instance.nodeTree.ID), 0)
-			rewards = list(self.db.dataBase[en.Reward].values())
+			rewards = list(self.instances.dataBase[en.Reward].values())
 			self.dropdown_active_2 = next((i for i, r in enumerate(rewards) if r.ID == instance.reward.ID), 0)
 
 		# Rewards
 		elif entity_class == en.Reward:
-			abilities = list(self.db.dataBase[en.Ability].values())
+			abilities = list(self.instances.dataBase[en.Ability].values())
 			self.dropdown_active_1 = next((i + 1 for i, a in enumerate(abilities) if a.ID == instance.ability.ID),
 			                              0) if instance.ability else 0
-			boosts = list(self.db.dataBase[en.StatBoost].values())
+			boosts = list(self.instances.dataBase[en.StatBoost].values())
 			self.dropdown_active_2 = next((i + 1 for i, b in enumerate(boosts) if b.ID == instance.statBoost.ID),
 			                              0) if instance.statBoost else 0
 
 		# Stat Boosts
 		elif entity_class == en.StatBoost:
-			types = list(self.db.dataBase[en.StatType].values())
+			types = list(self.instances.dataBase[en.StatType].values())
 			self.dropdown_active_1 = next((i for i, t in enumerate(types) if t.ID == instance.statType.ID), 0)
-			mods = list(self.db.dataBase[en.UpgradeModifier].values())
+			mods = list(self.instances.dataBase[en.UpgradeModifier].values())
 			self.dropdown_active_2 = next((i for i, m in enumerate(mods) if m.ID == instance.upgMod.ID), 0)
 
 		# Node Relations
 		elif entity_class == en.NodeRelation:
-			nodes = list(self.db.dataBase[en.Node].values())
+			nodes = list(self.instances.dataBase[en.Node].values())
 			self.dropdown_active_1 = next((i for i, n in enumerate(nodes) if n.ID == instance.parentNode.ID), 0)
 			self.dropdown_active_2 = next((i for i, n in enumerate(nodes) if n.ID == instance.childNode.ID), 0)
 
 		# Tree Allowed Stats
 		elif entity_class == en.TreeAllowedStat:
 			self.text_buffer_1 = ffi.new("char[128]", str(instance.baseValue).encode('utf-8'))
-			trees = list(self.db.dataBase[en.NodeTree].values())
+			trees = list(self.instances.dataBase[en.NodeTree].values())
 			self.dropdown_active_1 = next((i for i, t in enumerate(trees) if t.ID == instance.nodeTree.ID), 0)
-			stats = list(self.db.dataBase[en.StatType].values())
+			stats = list(self.instances.dataBase[en.StatType].values())
 			self.dropdown_active_2 = next((i for i, s in enumerate(stats) if s.ID == instance.statType.ID), 0)
 
 		# Tree Upgrade Modifiers
 		elif entity_class == en.TreeUpgradeModifier:
 			self.text_buffer_1 = ffi.new("char[128]", str(instance.value).encode('utf-8'))
-			trees = list(self.db.dataBase[en.NodeTree].values())
+			trees = list(self.instances.dataBase[en.NodeTree].values())
 			self.dropdown_active_1 = next((i for i, t in enumerate(trees) if t.ID == instance.nodeTree.ID), 0)
-			mods = list(self.db.dataBase[en.UpgradeModifier].values())
+			mods = list(self.instances.dataBase[en.UpgradeModifier].values())
 			self.dropdown_active_2 = next((i for i, m in enumerate(mods) if m.ID == instance.upgMod.ID), 0)
 
 	# ==========================================================
@@ -180,15 +190,17 @@ class UpgradeTreeEditor:
 
 		navigation_views = [
 			(self.VIEW_UPGRADE_TREES, "Upgrade Trees"),
+			(self.VIEW_TREE_ALLOWED_STATS, "Tree Allowed Stats"),
+			(self.VIEW_TREE_UPGRADE_MODIFIERS, "Tree Upgrade Mods"),
 			(self.VIEW_NODES, "Upgrade Nodes"),
-			(self.VIEW_ABILITIES, "Abilities"),
+			(self.VIEW_NODE_RELATIONS, "Node Relations"),
 			(self.VIEW_REWARDS, "Rewards"),
+			(self.VIEW_ABILITIES, "Abilities"),
 			(self.VIEW_STAT_BOOSTS, "Stat Boosts"),
 			(self.VIEW_STAT_TYPES, "Stat Types"),
 			(self.VIEW_UPGRADE_MODIFIERS, "Upgrade Modifiers"),
-			(self.VIEW_NODE_RELATIONS, "Node Relations"),
-			(self.VIEW_TREE_ALLOWED_STATS, "Tree Allowed Stats"),
-			(self.VIEW_TREE_UPGRADE_MODIFIERS, "Tree Upgrade Mods")
+			(self.VIEW_POPUP_SAVE, "Save To CSVs"),
+			(self.VIEW_POPUP_LOAD, "Load From CSVs")
 		]
 
 		rl.gui_set_style(rl.GuiControl.BUTTON, 1, rl.color_to_int(rl.RAYWHITE))
@@ -198,22 +210,15 @@ class UpgradeTreeEditor:
 
 		old_view = self.current_view
 		for view_id, label in navigation_views:
-			if rl.gui_button(rl.Rectangle(x, y, button_width, button_height), label):
+			if rl.gui_button(rl.Rectangle(x, y, button_width, button_height), label.encode('utf-8')):
 				self.current_view = view_id
+
 			y += button_height + spacing
-
-		y += 10
-		if rl.gui_button(rl.Rectangle(x, y, button_width, button_height), "Save To CSVs"):
-			self.prev_view = self.current_view
-			self.current_view = self.VIEW_POPUP_SAVE
-
-		y += button_height + spacing
-		if rl.gui_button(rl.Rectangle(x, y, button_width, button_height), "Load From CSVs"):
-			self.prev_view = self.current_view
-			self.current_view = self.VIEW_POPUP_LOAD
 
 		if self.current_view != old_view:
 			self.reset_form()
+			self.sort_col_idx = 0
+			self.sort_ascending = True
 
 	def draw_content(self):
 		content_x = 250
@@ -270,7 +275,7 @@ class UpgradeTreeEditor:
 		rl.gui_label(rl.Rectangle(x + 20, y + 35, 400, 20), subtitle)
 
 		headers = entity_class.HEADERS
-		data = [ent.to_display_list() for ent in self.db.dataBase[entity_class].values()]
+		data = [ent.to_display_list() for ent in self.instances.dataBase[entity_class].values()]
 
 		table_w = w - 340
 		table_h = h - 85
@@ -322,8 +327,8 @@ class UpgradeTreeEditor:
 			wrapped_lines = textwrap.wrap(self.error_message, width=42)
 
 			for i, line in enumerate(wrapped_lines):
-				line_y_position = int(form_y + table_h - 60 + (i * 14))
-				rl.draw_text(line, int(form_x + 15), line_y_position, 11, rl.RED)
+				line_y_position = int(form_y + table_h - 100 + (i * 14))
+				rl.draw_text(line, int(form_x + 10), line_y_position, 11, rl.RED)
 
 	# ==========================================================
 	# SCHEMA INPUT FIELD WRAPPERS
@@ -344,13 +349,13 @@ class UpgradeTreeEditor:
 		rl.gui_check_box(rl.Rectangle(fx, fy + 62, 20, 20), "Starting Node Point", self.checkbox_val)
 		if is_dropdown_active: rl.gui_unlock()
 
-		trees = list(self.db.dataBase[en.NodeTree].values())
+		trees = list(self.instances.dataBase[en.NodeTree].values())
 		tree_opts = [t.display_name for t in trees] if trees else ["[ ! ] Create NodeTree first"]
 		self.dropdown_active_1 = self.draw_custom_dropdown(rl.Rectangle(fx, fy + 105, fw, 30), "Assigned Node Tree:",
 		                                                   tree_opts, self.dropdown_active_1, "dropdown_edit_mode_1",
 		                                                   "dropdown_active_1")
 
-		rewards = list(self.db.dataBase[en.Reward].values())
+		rewards = list(self.instances.dataBase[en.Reward].values())
 		reward_opts = [r.display_name for r in rewards] if rewards else ["[ ! ] Create Reward first"]
 		self.dropdown_active_2 = self.draw_custom_dropdown(rl.Rectangle(fx, fy + 165, fw, 30), "Linked Node Reward:",
 		                                                   reward_opts, self.dropdown_active_2, "dropdown_edit_mode_2",
@@ -358,14 +363,14 @@ class UpgradeTreeEditor:
 		return fy + 215
 
 	def draw_fields_reward(self, fx, fy, fw, is_dropdown_active=False):
-		abilities = list(self.db.dataBase[en.Ability].values())
+		abilities = list(self.instances.dataBase[en.Ability].values())
 		ab_opts = [" None / Empty "] + [a.display_name for a in abilities]
 		self.dropdown_active_1 = self.draw_custom_dropdown(rl.Rectangle(fx, fy + 25, fw, 30),
 		                                                   "Linked Ability (Optional):", ab_opts,
 		                                                   self.dropdown_active_1, "dropdown_edit_mode_1",
 		                                                   "dropdown_active_1")
 
-		boosts = list(self.db.dataBase[en.StatBoost].values())
+		boosts = list(self.instances.dataBase[en.StatBoost].values())
 		sb_opts = [" None / Empty "] + [b.display_name for b in boosts]
 		self.dropdown_active_2 = self.draw_custom_dropdown(rl.Rectangle(fx, fy + 85, fw, 30),
 		                                                   "Linked Stat Boost (Optional):", sb_opts,
@@ -374,13 +379,13 @@ class UpgradeTreeEditor:
 		return fy + 135
 
 	def draw_fields_statboost(self, fx, fy, fw, is_dropdown_active=False):
-		types = list(self.db.dataBase[en.StatType].values())
+		types = list(self.instances.dataBase[en.StatType].values())
 		type_opts = [t.display_name for t in types] if types else ["[ ! ] Create StatType first"]
 		self.dropdown_active_1 = self.draw_custom_dropdown(rl.Rectangle(fx, fy + 25, fw, 30), "Target Stat Category:",
 		                                                   type_opts, self.dropdown_active_1, "dropdown_edit_mode_1",
 		                                                   "dropdown_active_1")
 
-		mods = list(self.db.dataBase[en.UpgradeModifier].values())
+		mods = list(self.instances.dataBase[en.UpgradeModifier].values())
 		mod_opts = [m.display_name for m in mods] if mods else ["[ ! ] Create Modifier first"]
 		self.dropdown_active_2 = self.draw_custom_dropdown(rl.Rectangle(fx, fy + 85, fw, 30), "Applied Modifier Type:",
 		                                                   mod_opts, self.dropdown_active_2, "dropdown_edit_mode_2",
@@ -388,7 +393,7 @@ class UpgradeTreeEditor:
 		return fy + 135
 
 	def draw_fields_node_relation(self, fx, fy, fw, is_dropdown_active=False):
-		nodes = list(self.db.dataBase[en.Node].values())
+		nodes = list(self.instances.dataBase[en.Node].values())
 		node_opts = [n.display_name for n in nodes] if nodes else ["[ ! ] Create Node first"]
 		self.dropdown_active_1 = self.draw_custom_dropdown(rl.Rectangle(fx, fy + 25, fw, 30), "Parent Node:", node_opts,
 		                                                   self.dropdown_active_1, "dropdown_edit_mode_1",
@@ -399,13 +404,13 @@ class UpgradeTreeEditor:
 		return fy + 135
 
 	def draw_fields_tree_allowed_stat(self, fx, fy, fw, is_dropdown_active=False):
-		trees = list(self.db.dataBase[en.NodeTree].values())
+		trees = list(self.instances.dataBase[en.NodeTree].values())
 		tree_opts = [t.display_name for t in trees] if trees else ["[ ! ] Create NodeTree first"]
 		self.dropdown_active_1 = self.draw_custom_dropdown(rl.Rectangle(fx, fy + 25, fw, 30), "Target Tree:", tree_opts,
 		                                                   self.dropdown_active_1, "dropdown_edit_mode_1",
 		                                                   "dropdown_active_1")
 
-		stats = list(self.db.dataBase[en.StatType].values())
+		stats = list(self.instances.dataBase[en.StatType].values())
 		stat_opts = [s.display_name for s in stats] if stats else ["[ ! ] Create StatType first"]
 		self.dropdown_active_2 = self.draw_custom_dropdown(rl.Rectangle(fx, fy + 85, fw, 30), "Allowed Stat:",
 		                                                   stat_opts, self.dropdown_active_2, "dropdown_edit_mode_2",
@@ -419,13 +424,13 @@ class UpgradeTreeEditor:
 		return fy + 190
 
 	def draw_fields_tree_upg_mod(self, fx, fy, fw, is_dropdown_active=False):
-		trees = list(self.db.dataBase[en.NodeTree].values())
+		trees = list(self.instances.dataBase[en.NodeTree].values())
 		tree_opts = [t.display_name for t in trees] if trees else ["[ ! ] Create NodeTree first"]
 		self.dropdown_active_1 = self.draw_custom_dropdown(rl.Rectangle(fx, fy + 25, fw, 30), "Target Tree:", tree_opts,
 		                                                   self.dropdown_active_1, "dropdown_edit_mode_1",
 		                                                   "dropdown_active_1")
 
-		mods = list(self.db.dataBase[en.UpgradeModifier].values())
+		mods = list(self.instances.dataBase[en.UpgradeModifier].values())
 		mod_opts = [m.display_name for m in mods] if mods else ["[ ! ] Create Modifier first"]
 		self.dropdown_active_2 = self.draw_custom_dropdown(rl.Rectangle(fx, fy + 85, fw, 30), "Applied Modifier:",
 		                                                   mod_opts, self.dropdown_active_2, "dropdown_edit_mode_2",
@@ -474,46 +479,28 @@ class UpgradeTreeEditor:
 	# ==========================================================
 	def handle_action(self, entity_class, action):
 		self.error_message = ""
+		instances_db = self.instances.dataBase[entity_class]
+		target_instance = instances_db.get(self.selected_id)
 		try:
 			input_text = ffi.string(self.text_buffer_1).decode("utf-8").strip()
 
-			# 1. Processing DELETIONS
 			if action == "delete" and self.selected_id:
-				target_instance = self.db.dataBase[entity_class].get(self.selected_id)
 				if target_instance:
-					if hasattr(target_instance, 'name') and hasattr(entity_class, 'storedUnique'):
-						entity_class.storedUnique.discard(target_instance.name)
-						entity_class.storedUnique.discard(target_instance.name.upper())
-					if entity_class == en.StatBoost:
-						entity_class.storedUnique.discard((target_instance.statType.ID, target_instance.upgMod.ID))
-					if entity_class == en.Reward:
-						ab_id = target_instance.ability.ID if target_instance.ability else None
-						sb_id = target_instance.statBoost.ID if target_instance.statBoost else None
-						entity_class.storedUnique.discard((ab_id, sb_id))
-					if entity_class == en.NodeRelation:
-						entity_class.storedUnique.discard((target_instance.parentNode.ID, target_instance.childNode.ID))
-					if entity_class == en.TreeAllowedStat:
-						entity_class.storedUnique.discard((target_instance.nodeTree.ID, target_instance.statType.ID))
-					if entity_class == en.TreeUpgradeModifier:
-						entity_class.storedUnique.discard((target_instance.nodeTree.ID, target_instance.upgMod.ID))
-
-					self.db.remove_instance(target_instance)
+					self.instances.remove_instance(target_instance)
 					self.reset_form()
 				return
 
 			# 2. Managing basic entities (String names only)
-			if entity_class in [en.NodeTree, en.Ability, en.StatType, en.UpgradeModifier]:
+			if "NAME" in entity_class.HEADERS:
 				if not input_text: raise ValueError("Name string parameter is required.")
 
 				if action == "add":
-					self.db.addInstance(entity_class(name=input_text))
+					self.instances.addInstance(entity_class(name=input_text))
 				elif action == "update":
-					mod_inst = self.db.dataBase[entity_class].get(self.selected_id)
-					if mod_inst:
-						entity_class.storedUnique.discard(mod_inst.name)
-						entity_class.storedUnique.discard(mod_inst.name.upper())
-						mod_inst.name = mod_inst.check_unique(input_text)
-						self.db.update_instance(mod_inst)
+					if target_instance:
+						target_instance.remove_self_unique_value()
+						target_instance.name = target_instance.check_unique(input_text)
+						self.instances.update_instance(target_instance)
 
 			# 3. Nodes
 			elif entity_class == en.Node:
@@ -522,55 +509,56 @@ class UpgradeTreeEditor:
 				except ValueError:
 					raise ValueError("Requirement points must be an Integer.")
 
-				trees = list(self.db.dataBase[en.NodeTree].values())
-				rewards = list(self.db.dataBase[en.Reward].values())
+				trees = list(self.instances.dataBase[en.NodeTree].values())
+				rewards = list(self.instances.dataBase[en.Reward].values())
 				if not trees or not rewards: raise ValueError("Missing Trees or Rewards.")
 
 				picked_tree = trees[min(self.dropdown_active_1, len(trees) - 1)]
 				picked_reward = rewards[min(self.dropdown_active_2, len(rewards) - 1)]
 
 				if action == "add":
-					self.db.addInstance(
+					self.instances.addInstance(
 						en.Node(nRequired=requirement_points, startingNode=self.checkbox_val[0], nodeTree=picked_tree,
 						        reward=picked_reward))
 				elif action == "update":
-					mod_node = self.db.dataBase[entity_class].get(self.selected_id)
-					if mod_node:
-						mod_node.nRequired = requirement_points
-						mod_node.startNode = self.checkbox_val[0]
-						mod_node.nodeTree = picked_tree
-						mod_node.reward = picked_reward
-						self.db.update_instance(mod_node)
+					if target_instance:
+						target_instance.nRequired = requirement_points
+						target_instance.startNode = self.checkbox_val[0]
+						target_instance.nodeTree = picked_tree
+						target_instance.reward = picked_reward
+						self.instances.update_instance(target_instance)
 
 			# 4. Rewards
 			elif entity_class == en.Reward:
-				abilities = list(self.db.dataBase[en.Ability].values())
-				boosts = list(self.db.dataBase[en.StatBoost].values())
+				abilities = list(self.instances.dataBase[en.Ability].values())
+				boosts = list(self.instances.dataBase[en.StatBoost].values())
 
 				picked_ability = abilities[self.dropdown_active_1 - 1] if self.dropdown_active_1 > 0 else None
 				picked_boost = boosts[self.dropdown_active_2 - 1] if self.dropdown_active_2 > 0 else None
 				unique_pair = (picked_ability.ID if picked_ability else None, picked_boost.ID if picked_boost else None)
 
 				if action == "add":
-					self.db.addInstance(en.Reward(ability=picked_ability, statBoost=picked_boost))
+					self.instances.addInstance(en.Reward(ability=picked_ability, statBoost=picked_boost))
 				elif action == "update":
-					mod_rwd = self.db.dataBase[entity_class].get(self.selected_id)
-					if mod_rwd:
-						old_pair = (mod_rwd.ability.ID if mod_rwd.ability else None,
-						            mod_rwd.statBoost.ID if mod_rwd.statBoost else None)
-						en.Reward.storedUnique.discard(old_pair)
+					modified_reward = target_instance
+
+					if modified_reward:
+						old_pair = modified_reward.get_unique_value()
+						modified_reward.remove_self_unique_value()
+
 						if unique_pair in en.Reward.storedUnique:
 							en.Reward.storedUnique.add(old_pair)
 							raise ValueError(f"Reward combination '{unique_pair}' already exists.")
+
 						en.Reward.storedUnique.add(unique_pair)
-						mod_rwd.ability = picked_ability
-						mod_rwd.statBoost = picked_boost
-						self.db.update_instance(mod_rwd)
+						modified_reward.ability = picked_ability
+						modified_reward.statBoost = picked_boost
+						self.instances.update_instance(modified_reward)
 
 			# 5. Stat Boosts
 			elif entity_class == en.StatBoost:
-				types = list(self.db.dataBase[en.StatType].values())
-				mods = list(self.db.dataBase[en.UpgradeModifier].values())
+				types = list(self.instances.dataBase[en.StatType].values())
+				mods = list(self.instances.dataBase[en.UpgradeModifier].values())
 				if not types or not mods: raise ValueError("Missing StatTypes or Modifiers.")
 
 				picked_type = types[min(self.dropdown_active_1, len(types) - 1)]
@@ -578,23 +566,25 @@ class UpgradeTreeEditor:
 				unique_pair = (picked_type.ID, picked_mod.ID)
 
 				if action == "add":
-					self.db.addInstance(en.StatBoost(statType=picked_type, upgMod=picked_mod))
+					self.instances.addInstance(en.StatBoost(statType=picked_type, upgMod=picked_mod))
 				elif action == "update":
-					mod_bst = self.db.dataBase[entity_class].get(self.selected_id)
-					if mod_bst:
-						old_pair = (mod_bst.statType.ID, mod_bst.upgMod.ID)
-						en.StatBoost.storedUnique.discard(old_pair)
+					modified_stat_boost = target_instance
+					if modified_stat_boost:
+						old_pair = modified_stat_boost.get_unique_value()
+						modified_stat_boost.remove_self_unique_value()
+
 						if unique_pair in en.StatBoost.storedUnique:
 							en.StatBoost.storedUnique.add(old_pair)
 							raise ValueError(f"Stat boost mapping '{unique_pair}' already exists.")
 						en.StatBoost.storedUnique.add(unique_pair)
-						mod_bst.statType = picked_type
-						mod_bst.upgMod = picked_mod
-						self.db.update_instance(mod_bst)
+
+						modified_stat_boost.statType = picked_type
+						modified_stat_boost.upgMod = picked_mod
+						self.instances.update_instance(modified_stat_boost)
 
 			# 6. Node Relations
 			elif entity_class == en.NodeRelation:
-				nodes = list(self.db.dataBase[en.Node].values())
+				nodes = list(self.instances.dataBase[en.Node].values())
 				if not nodes or len(nodes) < 2: raise ValueError("Need at least 2 Nodes to create a relation.")
 
 				parent = nodes[min(self.dropdown_active_1, len(nodes) - 1)]
@@ -602,24 +592,27 @@ class UpgradeTreeEditor:
 				unique_pair = (parent.ID, child.ID)
 
 				if action == "add":
-					self.db.addInstance(en.NodeRelation(parentNode=parent, childNode=child))
+					self.instances.addInstance(en.NodeRelation(parentNode=parent, childNode=child))
 				elif action == "update":
-					mod_rel = self.db.dataBase[entity_class].get(self.selected_id)
-					if mod_rel:
-						old_pair = (mod_rel.parentNode.ID, mod_rel.childNode.ID)
-						en.NodeRelation.storedUnique.discard(old_pair)
+					modified_node_relation = target_instance
+
+					if modified_node_relation:
+						old_pair = modified_node_relation.get_unique_value()
+						modified_node_relation.remove_self_unique_value()
+
 						if unique_pair in en.NodeRelation.storedUnique:
 							en.NodeRelation.storedUnique.add(old_pair)
 							raise ValueError(f"Node relation '{unique_pair}' already exists.")
+
 						en.NodeRelation.storedUnique.add(unique_pair)
-						mod_rel.parentNode = parent
-						mod_rel.childNode = child
-						self.db.update_instance(mod_rel)
+						modified_node_relation.parentNode = parent
+						modified_node_relation.childNode = child
+						self.instances.update_instance(modified_node_relation)
 
 			# 7. Tree Allowed Stats
 			elif entity_class == en.TreeAllowedStat:
-				trees = list(self.db.dataBase[en.NodeTree].values())
-				stats = list(self.db.dataBase[en.StatType].values())
+				trees = list(self.instances.dataBase[en.NodeTree].values())
+				stats = list(self.instances.dataBase[en.StatType].values())
 				if not trees or not stats: raise ValueError("Missing Trees or Stat Types.")
 
 				try:
@@ -632,25 +625,28 @@ class UpgradeTreeEditor:
 				unique_pair = (picked_tree.ID, picked_stat.ID)
 
 				if action == "add":
-					self.db.addInstance(en.TreeAllowedStat(tree=picked_tree, stat=picked_stat, baseValue=base_val))
+					self.instances.addInstance(en.TreeAllowedStat(tree=picked_tree, stat=picked_stat, baseValue=base_val))
 				elif action == "update":
-					mod_tas = self.db.dataBase[entity_class].get(self.selected_id)
-					if mod_tas:
-						old_pair = (mod_tas.nodeTree.ID, mod_tas.statType.ID)
-						en.TreeAllowedStat.storedUnique.discard(old_pair)
+					modified_tree_allowed_stats = target_instance
+
+					if modified_tree_allowed_stats:
+						old_pair = modified_tree_allowed_stats.get_unique_value()
+						modified_tree_allowed_stats.remove_self_unique_value()
+
 						if unique_pair in en.TreeAllowedStat.storedUnique:
 							en.TreeAllowedStat.storedUnique.add(old_pair)
 							raise ValueError(f"Tree Allowed Stat '{unique_pair}' already exists.")
+
 						en.TreeAllowedStat.storedUnique.add(unique_pair)
-						mod_tas.nodeTree = picked_tree
-						mod_tas.statType = picked_stat
-						mod_tas.baseValue = base_val
-						self.db.update_instance(mod_tas)
+						modified_tree_allowed_stats.nodeTree = picked_tree
+						modified_tree_allowed_stats.statType = picked_stat
+						modified_tree_allowed_stats.baseValue = base_val
+						self.instances.update_instance(modified_tree_allowed_stats)
 
 			# 8. Tree Upgrade Modifiers
 			elif entity_class == en.TreeUpgradeModifier:
-				trees = list(self.db.dataBase[en.NodeTree].values())
-				mods = list(self.db.dataBase[en.UpgradeModifier].values())
+				trees = list(self.instances.dataBase[en.NodeTree].values())
+				mods = list(self.instances.dataBase[en.UpgradeModifier].values())
 				if not trees or not mods: raise ValueError("Missing Trees or Modifiers.")
 
 				try:
@@ -663,20 +659,23 @@ class UpgradeTreeEditor:
 				unique_pair = (picked_tree.ID, picked_mod.ID)
 
 				if action == "add":
-					self.db.addInstance(en.TreeUpgradeModifier(tree=picked_tree, upgMod=picked_mod, value=val))
+					self.instances.addInstance(en.TreeUpgradeModifier(tree=picked_tree, upgMod=picked_mod, value=val))
 				elif action == "update":
-					mod_tum = self.db.dataBase[entity_class].get(self.selected_id)
-					if mod_tum:
-						old_pair = (mod_tum.nodeTree.ID, mod_tum.upgMod.ID)
-						en.TreeUpgradeModifier.storedUnique.discard(old_pair)
+					modified_tree_upgrade_modifiers = target_instance
+
+					if modified_tree_upgrade_modifiers:
+						old_pair = modified_tree_upgrade_modifiers.get_unique_value()
+						modified_tree_upgrade_modifiers.remove_self_unique_value()
+
 						if unique_pair in en.TreeUpgradeModifier.storedUnique:
 							en.TreeUpgradeModifier.storedUnique.add(old_pair)
 							raise ValueError(f"Tree Upgrade Mod '{unique_pair}'\n already exists.")
+
 						en.TreeUpgradeModifier.storedUnique.add(unique_pair)
-						mod_tum.nodeTree = picked_tree
-						mod_tum.upgMod = picked_mod
-						mod_tum.value = val
-						self.db.update_instance(mod_tum)
+						modified_tree_upgrade_modifiers.nodeTree = picked_tree
+						modified_tree_upgrade_modifiers.upgMod = picked_mod
+						modified_tree_upgrade_modifiers.value = val
+						self.instances.update_instance(modified_tree_upgrade_modifiers)
 
 			self.reset_form()
 
@@ -701,8 +700,34 @@ class UpgradeTreeEditor:
 		rl.gui_set_style(rl.GuiControl.BUTTON, 0, rl.color_to_int(rl.GRAY))
 		rl.gui_set_style(rl.GuiControl.BUTTON, 4, rl.color_to_int(rl.GRAY))
 
+		if self.sort_col_idx>=len(headers):
+			self.sort_col_idx = 0
+
+		#Handling the clicking to sort by each header
 		for i, header in enumerate(headers):
-			rl.gui_button([x + i * col_width, y, col_width, row_height], header)
+			display_header = header
+
+			if i == self.sort_col_idx:
+				display_header += " ^" if self.sort_ascending else " v"
+
+			if rl.gui_button([x + i * col_width, y, col_width, row_height], display_header):
+				if self.sort_col_idx == i:
+					self.sort_ascending = not self.sort_ascending
+				else:
+					self.sort_col_idx = i
+					self.sort_ascending = True
+
+		#Sort the data
+		if data:
+			def sort_key(row):
+				val = row[self.sort_col_idx]
+
+				try:
+					return (0,float(val))
+				except (ValueError,TypeError):
+					return (1,str(val).strip())
+
+			data.sort(key=sort_key, reverse=not self.sort_ascending)
 
 		content_y = y + row_height
 		content_h = h - row_height
@@ -753,8 +778,8 @@ class UpgradeTreeEditor:
 		if rl.gui_button([popup_x + 10, popup_y + 30, 100, 30], "Yes"):
 			self.current_view = self.prev_view
 			current_title = ffi.string(self.title_text).decode("utf-8")
-			self.db.set_title(current_title)
-			self.db.save_all()
+			self.instances.set_title(current_title)
+			self.instances.save_all()
 			return
 		if rl.gui_button([popup_x + 190, popup_y + 30, 100, 30], "No"):
 			self.current_view = self.prev_view
@@ -772,9 +797,9 @@ class UpgradeTreeEditor:
 		if rl.gui_button([popup_x + 10, popup_y + 30, 100, 30], "Yes"):
 			self.current_view = self.prev_view
 			current_title = ffi.string(self.title_text).decode("utf-8")
-			self.db = Instances.Instances(current_title)
-			self.db.set_title(current_title)
-			self.db.load_all()
+			self.instances = Instances.Instances(current_title)
+			self.instances.set_title(current_title)
+			self.instances.load_all()
 			self.reset_form()
 			return
 		if rl.gui_button([popup_x + 210, popup_y + 30, 100, 30], "No"):

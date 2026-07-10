@@ -719,8 +719,12 @@ class UpgradeTreeEditor:
 
 		#Sort the data
 		if data:
+
 			def sort_key(row):
-				val = row[self.sort_col_idx]
+				val:str = row[self.sort_col_idx]
+
+				if '-' in val:
+					val = val.split('-')[1]
 
 				try:
 					return (0,float(val))

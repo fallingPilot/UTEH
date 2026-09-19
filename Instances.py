@@ -224,10 +224,10 @@ class Instances:
                 dependents_names = ",\n".join([f"{d.ID}" for d in dependents])
                 raise ValueError(f"Can't delete {entityClass.__name__} with ID {instance.ID}.\nUsed by: {dependents_names}")
 
-        else:
-            for dep in dependents:
-                #Recursive call, remove every instance that depends on this one
-                self.remove_instance(dep, in_cascade=True)
+            else:
+                for dep in dependents:
+                    #Recursive call, remove every instance that depends on this one
+                    self.remove_instance(dep, in_cascade=True)
 
         self.dataBase[entityClass].pop(instance.ID)
         print("Removed instance: ", instance)

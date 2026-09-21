@@ -1,2 +1,4 @@
 csv-manager
-raylib
+uvicorn
+fastapi
+pydantic

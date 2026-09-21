@@ -1,6 +1,6 @@
 from typing import Dict, Type
-from csv_manager import CSVManager
-from entities import (
+from .csv_controller import csvM
+from .entities import (
     BaseEntity, StatType, UpgradeModifier, Ability, NodeTree,
     StatBoost, Reward, Node, NodeRelation, TreeAllowedStat, TreeUpgradeModifier
 )
@@ -15,7 +15,7 @@ class Instances:
         :param folderPath: The folder path when storing the instances into csv's.
         """
         self.folderPath = folderPath
-        self.csvManager = CSVManager()
+        self.csvManager = csvM()
 
         # Key: The entity itself
         # Value: dictionary of {"ID": Instance}
@@ -224,10 +224,9 @@ class Instances:
                 dependents_names = ",\n".join([f"{d.ID}" for d in dependents])
                 raise ValueError(f"Can't delete {entityClass.__name__} with ID {instance.ID}.\nUsed by: {dependents_names}")
 
-            else:
-                for dep in dependents:
-                    #Recursive call, remove every instance that depends on this one
-                    self.remove_instance(dep, in_cascade=True)
+            for dep in dependents:
+                # Recursive call, remove every instance that depends on this one
+                self.remove_instance(dep, in_cascade=True)
 
         self.dataBase[entityClass].pop(instance.ID)
         print("Removed instance: ", instance)

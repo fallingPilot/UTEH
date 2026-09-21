@@ -16,8 +16,8 @@ For the users. Grab the latest ready-to-run build from the **[Releases page](htt
  
 | Platform | File | Notes |
 |----------|------|-------|
-| 🪟 Windows | `UTEH-W11.exe` | Download and run — no installation needed. |
-| 🐧 Linux | `UTEH-Linux.bin` | Download, then mark it as executable: `chmod +x UTEH-Linux.bin`, then run it with `./UTEH-Linux.bin`. |
+| Windows | `UTEH-W11.exe` | Download and run — no installation needed. |
+| Linux | `UTEH-Linux.bin` | Download, then mark it as executable: `chmod +x UTEH-Linux.bin`, then run it with `./UTEH-Linux.bin`. |
  
 If you want a specific older version instead, check the full [releases history](https://github.com/fallingPilot/UTEH/releases).
  

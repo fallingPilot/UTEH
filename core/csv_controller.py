@@ -1,9 +1,9 @@
 import csv
 import os
 from typing import List,Type
-from entities import BaseEntity
+from .entities import BaseEntity
 
-class CSVManager:
+class csvM:
     def __init__(self):
         """
         Initializes the manager with the csv files directory

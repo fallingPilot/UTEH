@@ -18,6 +18,9 @@ app.add_middleware(
 
 db_manager = Instances()
 
+@app.api_route("/api/health", methods=["GET", "HEAD"])
+def health_check():
+	return {"status": "ok"}
 
 def _serialize_value(value):
 	"""Turn entity references into plain, JSON-friendly data. Every entity
@@ -156,7 +159,3 @@ def delete_instance(entity_type: str, instance_id: str, in_cascade: bool = False
 		# it belongs in the 4xx range like every other validation error in
 		# this file -- fixed while touching this for the CRUD pass.
 		raise HTTPException(status_code=400, detail=str(ve))
-
-if __name__ == "__main__":
-	port = int(sys.argv[1]) if len(sys.argv) > 1 else 8000
-	uvicorn.run(app, host="127.0.0.1", port=port)

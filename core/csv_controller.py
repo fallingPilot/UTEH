@@ -1,7 +1,7 @@
 import csv
 import os
 from typing import List,Type
-from .entities import BaseEntity
+from .entities import Entity
 
 class csvM:
     def __init__(self):
@@ -10,7 +10,7 @@ class csvM:
         """
         self.folder_path = ""
 
-    def _get_filename(self, entity_class: Type[BaseEntity])->str:
+    def _get_filename(self, entity_class: Type[Entity])->str:
         """Generates the filename based on the class name"""
         return os.path.join(self.folder_path, f"{entity_class.__name__}.csv")
 
@@ -19,8 +19,8 @@ class csvM:
         self.folder_path = os.path.join(self.folder_path, "Entities")
         print("Project folder path is: ",self.folder_path)
 
-    def write_instances(self, entity_class: Type[BaseEntity], instances: List[BaseEntity])->None:
-        """Escribe la lista de las instancias a su archivo csv"""
+    def write_instances(self, entity_class: Type[Entity], instances: List[Entity])->None:
+        """Writes the instances to the csv file"""
         if self.folder_path and not os.path.exists(self.folder_path):
             os.makedirs(self.folder_path)
 
@@ -36,7 +36,7 @@ class csvM:
             for instance in instances:
                 writer.writerow(instance.to_list())
 
-    def read_instances(self, entity_class: Type[BaseEntity])->List[List[str]]:
+    def read_instances(self, entity_class: Type[Entity])->List[List[str]]:
         """Reads the csv file and returns a list of rows"""
         filename = self._get_filename(entity_class)
         print("Loading from:", os.path.abspath(filename))
